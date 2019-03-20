@@ -22,7 +22,7 @@ def main():
 
     #Connect with the sensors and start recording the data
     print("Please turn on the sensors and follow the instruction","\n")
-    connect_record_sensors(sock,sensor_1,sensor_2,sensor_3,sensor_4,key_log,firebase,path)
+    connect_record_sensors(sock,sensor_1,sensor_2,sensor_3,sensor_4,key_log,path,firebase)
 
 def firebase_cloud_config():
     """Return Firebase configuration """
@@ -30,9 +30,9 @@ def firebase_cloud_config():
 
 def udp_config():
     """Configure UDP server and return web-socket """
-    UDP_IP = "192.168.137.1"
+    UDP_IP = "130.232.140.112"
     UDP_PORT = 33333
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, UDP_PORT))
     return sock
 
@@ -54,7 +54,7 @@ def create_data_logs():
     
     return sensor_1_log,sensor_2_log,sensor_3_log,sensor_4_log,store_key,path
     
-def connect_record_sensors(sock,sensor_1,sensor_2,sensor_3,sensor_4,key_log,firebase,path):
+def connect_record_sensors(sock,sensor_1,sensor_2,sensor_3,sensor_4,key_log,path,firebase):
     encryption_key= get_encryption_key (key_log,path)
     availalbe_sensor_identity_list = list()
     
@@ -85,13 +85,13 @@ def connect_record_sensors(sock,sensor_1,sensor_2,sensor_3,sensor_4,key_log,fire
             user_input = int(input("Press 1 to start, 2 for scan, 3 to save the files and exit"))
 
             if user_input == 1:
-                user_input_1(sock,encryption_key,firebase)
+                user_input_1(sock,encryption_key,firebase,sensor_1,sensor_2,sensor_3,sensor_4)
 
             elif user_input == 2:
                 user_input_2()
 
             elif user_input == 3:
-                user_input_3()
+                user_input_3(sensor_1,sensor_2,sensor_3,sensor_4)
 
             else:
                 print("Wrong selection. Process will start again.")
@@ -110,7 +110,7 @@ def get_encryption_key (key_log,path):
     f = Fernet(key)
     return f
     
-def user_input_1(sock,encryption_key,firebase):
+def user_input_1(sock,encryption_key,firebase,sensor_1,sensor_2,sensor_3,sensor_4):
     """ Working flow for user selection 1"""
     data_dict = dict()
     timestamp_list = list()
@@ -124,51 +124,42 @@ def user_input_1(sock,encryption_key,firebase):
                 if lines[0] =="PPG-1":
                     data = (str(lines[2].rstrip())).encode('utf-8')
                     encrypted_data = encryption_key.encrypt(data)
-                    time_stamp.append(str(datetime.datetime.now()))
+                    timestamp_list.append(str(datetime.datetime.now()))
                     data_list.append(encrypted_data.decode('utf-8'))
-                    data_dict["Timestamp"] =time_stamp
-                    data_dict["PPG-1"]=data_list
-                    firebase.post("wireless_data_collection/", data_dict)
                     
                 if lines[0] =="PPG-2":
                     data = (str(lines[2].rstrip())).encode('utf-8')
                     encrypted_data = encryption_key.encrypt(data)
-                    time_stamp.append(str(datetime.datetime.now()))
+                    timestamp_list.append(str(datetime.datetime.now()))
                     data_list.append(encrypted_data.decode('utf-8'))
-                    data_dict["Timestamp"] =time_stamp
-                    data_dict["PPG-2"]=data_list
-                    firebase.post("wireless_data_collection/", data_dict)
                     
                 if lines[0] =="Temp":
                     data = (str(lines[2].rstrip())).encode('utf-8')
                     encrypted_data = encryption_key.encrypt(data)
-                    time_stamp.append(str(datetime.datetime.now()))
+                    timestamp_list.append(str(datetime.datetime.now()))
                     data_list.append(encrypted_data.decode('utf-8'))
-                    data_dict["Timestamp"] =time_stamp
-                    data_dict["Temp"]=data_list
-                    firebase.post("wireless_data_collection/", data_dict)
-
+                    
                 if lines[0] =="Acc":
                     data = (str(lines[2].rstrip())).encode('utf-8')
                     encrypted_data = encryption_key.encrypt(data)
-                    time_stamp.append(str(datetime.datetime.now()))
+                    timestamp_list.append(str(datetime.datetime.now()))
                     data_list.append(encrypted_data.decode('utf-8'))
-                    data_dict["Timestamp"] =time_stamp
-                    data_dict["PPG-1"]=data_list
-                    firebase.post("wireless_data_collection/", data_dict)        
+
+            data_dict["Timestamp"] =timestamp_list 
+            data_dict["PPG-1"]=data_list
+            firebase.post("wireless_data_collection/", data_dict)        
                 
-                print(data_dict)
-                data_dict.clear()
-                timestamp_list.clear()
-                data_list.clear()
+            print(data_dict)
+            data_dict.clear()
+            timestamp_list.clear()
+            data_list.clear()
 
         except KeyboardInterrupt:
             store_exit(sensor_1,sensor_2,sensor_3,sensor_4)
 
 def user_input_2():
      """ Working flow for user selection 2 """
-     
-    print("Searching Again")
+     print("Searching Again")
 
 def user_input_3(sensor_1,sensor_2,sensor_3,sensor_4):
      """ Working flow for user selection 2 """
@@ -177,13 +168,11 @@ def user_input_3(sensor_1,sensor_2,sensor_3,sensor_4):
 
 def store_exit(sensor_1,sensor_2,sensor_3,sensor_4):
     """ Store the sensor data and excute system exit."""
-    
-     sensor_1.close()
-     sensor_2.close()
-     sensor_3.close()
-     sensor_4.close()
-     print("All files are saved and closed successfully.")
-     raise SystemExit
+    sensor_1.close()
+    sensor_2.close()
+    sensor_3.close()
+    sensor_4.close()
+    print("All files are saved and closed successfully.")
+    raise SystemExit
 
 main()
-
